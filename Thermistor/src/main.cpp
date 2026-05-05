@@ -14,14 +14,19 @@ uint8_t thermistorPin = A0;
 float thermVal      = 0.00, maxThermVal     = 0.00;
 float thermVoltage  = 0.00, maxThermVoltage = 0.00;
 
-uint16_t resistance        = 0;
-uint16_t minResistance     = 15000;
-uint16_t prevResistance    = 0;
-uint16_t averageResistance = 0;
-uint16_t TEMP_DELTA_THRESHOLD = 400;
+uint16_t R     = 0;
+uint16_t minR  = 15000;
+
+uint16_t prevR   = 0;
+uint16_t avgR    = 0;
+
+uint32_t sumR    = 0;
+uint32_t counter = 0;
+
+uint16_t RdeltaThreshold = 400;
 
 uint16_t SERIESRESISTOR = 10000;
-/* const uint16_t NOMINAL_RESISTANCE 10000
+/* const uint16_t NOMINAL_R 10000
 const uint8_t NOMINAL_TEMPERATURE 25
 const uint16_t BCOEFFICIENT 3950 */
 
@@ -60,28 +65,32 @@ void loop() {
   thermVoltage = thermVal * (5.0 / 1023.0);
   if (thermVoltage > maxThermVoltage) maxThermVoltage = thermVoltage;
 
-  resistance = SERIESRESISTOR * ((1023 / thermVal) - 1);
-  if (resistance < minResistance) minResistance = resistance;
+  R = SERIESRESISTOR * ((1023 / thermVal) - 1);
+  if (R < minR) minR = R;
+
+
+
+  //if(abs(prevR) - abs(R) > RdeltaThreshold) {}
+  
+  sumR += R;
+  counter++;
+  avgR = sumR/counter;
+
+  
+  prevR = R;
 
 
 
 
-  //prevResistance = resistance; ; find average of resistance and prevResistance ; then find average of last average and new average ; loop
-  averageResistance = (resistance + prevResistance)/2; //NOT FINAL VERSION
-  prevResistance = resistance;
+  lcd.setCursor(5, 0); lcd.print(format_uint16(avgR));
+  //lcd.setCursor(5, 1); lcd.print(format_uint16());
 
-
-
-
-  lcd.setCursor(0, 0); lcd.print(""); lcd.print(format_uint16(averageResistance));
   delay(50); // display frame
-
-
 
 
   Serial.print(thermVal    ); Serial.print(" value"); Serial.print("  "); Serial.print(maxThermVal    ); Serial.print  (" max value"); 
   Serial.print("      ");
   Serial.print(thermVoltage); Serial.print(" V"    ); Serial.print("  "); Serial.print(maxThermVoltage); Serial.print  (" max V"    ); 
   Serial.print("      ");
-  Serial.print(resistance  ); Serial.print(" ohm"  ); Serial.print("  "); Serial.print(minResistance  ); Serial.println(" min ohm"  ); 
+  Serial.print(R  ); Serial.print(" ohm"  ); Serial.print("  "); Serial.print(minR  ); Serial.println(" min ohm"  ); 
 }
