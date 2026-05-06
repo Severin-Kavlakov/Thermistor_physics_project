@@ -1,55 +1,58 @@
 #include <Arduino.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
 #include <LiquidCrystal.h>
-const uint8_t 
-  RS = 12 ,
-  E  = 11 ,
-  D4 = 5  ,
-  D5 = 4  ,
-  D6 = 3  ,
-  D7 = 2  ;
-LiquidCrystal lcd(RS, E, D4, D5, D6, D7);
 
-
-
-
+uint8_t buttonPin = A4;
+uint8_t tempSensorPin = 9;
 uint8_t thermistorPin = A0;
 
-float value    = 0.00; 
-float maxValue = 0.00;
-float V        = 0.00;
-float Vmax     = 0.00;
+const uint8_t 
+  RS = 12, 
+  E  = 11,
+  D4 = 5,
+  D5 = 4,
+  D6 = 3, 
+  D7 = 2;
+LiquidCrystal lcd(RS, E, D4, D5, D6, D7);
 
-uint16_t R    = 0;
-uint16_t Rmin = 65536;
+OneWire oneWire(tempSensorPin);      // oneWire instance - communicate with any OneWire device - not just Maxim/Dallas temperature ICs
+DallasTemperature sensors(&oneWire); // oneWire reference to Dallas Temperature lib
 
-uint16_t Rprev = 0;
 
-uint16_t RAvg  = 0;
-uint32_t Rsum  = 0;
-uint16_t R1    = 0;
-uint16_t R2    = 0;
-uint32_t count = 0;
-bool  isFirstCalculation = 1;
 
-uint16_t RdeltaThreshold = 400;
+
+float value = 0.00; 
+float V     = 0.00;
+
 uint16_t RseriesResistor = 10000;
-/* const uint16_t NOMINAL_R 10000
-const uint8_t NOMINAL_TEMPERATURE 25
-const uint16_t BCOEFFICIENT 3950 */
+uint16_t R     = 0;
+uint32_t RSum  = 0;
+uint32_t count = 0;
+float    RAvg  = 0;
+
+bool buttonState     = false;
+bool buttonStatePrev = false;
+uint16_t R1 = 0;
+uint16_t R2 = 0;
+bool isR1 = true;
+
+float tempC      = 0.00;
+float tempKelvin = 0.00;
 
 
 
 
-char floatOut[5];
-char* format_float(float f) {
-  dtostrf(f, sizeof(floatOut), 2, floatOut); //decimals
-  return floatOut;
+char bufferFloat[5];
+char* float_out(float f) {
+  dtostrf(f, sizeof(bufferFloat), 2, bufferFloat); //decimals
+  return bufferFloat;
 }
 
-char uint16Out[5];
-char* format_uint16(uint16_t i) {
-  sprintf(uint16Out, "%5d", i);
-  return uint16Out;
+char bufferUint16[5];
+char* uint16_t_out(uint16_t i) {
+  sprintf(bufferUint16, "%5d", i);
+  return bufferUint16;
 }
 
 
@@ -57,14 +60,16 @@ char* format_uint16(uint16_t i) {
 
 void setup() {
 
-Serial.begin(9600);
-pinMode(thermistorPin, INPUT);
-lcd.begin(16, 2);
+  Serial.begin(9600);
+  pinMode(thermistorPin, INPUT);
+  lcd.begin(16, 2);
 
-lcd.setCursor(0, 0); lcd.print("T1 R=");
-lcd.setCursor(0, 1); lcd.print("T2 R=");
+  lcd.setCursor(0, 0); lcd.print("T1 R=");
+  lcd.setCursor(0, 1); lcd.print("T2 R=");
 
-delay(500); //not sure if will work BUT supposed to wait to NOT have false positive cahnges in R delta
+  sensors.begin(); // Start temperature sensor lib
+
+  delay(1000); //debigging
 
 }
 
@@ -72,80 +77,75 @@ delay(500); //not sure if will work BUT supposed to wait to NOT have false posit
 
 
 void loop() {
+  value = analogRead(thermistorPin);
+  V = value * (5.0 / 1023.0);
+  R = RseriesResistor * ((1023.0 / value) - 1);
 
-value = analogRead(thermistorPin);
-if (value > maxValue) maxValue = value;
-
-V = value * (5.0 / 1023.0);
-if (V > Vmax) Vmax = V;
-
-R = RseriesResistor * ((1023 / value) - 1);
-if (R < Rmin) Rmin = R;
+  //sensors.requestTemperatures();
+  //tempC = sensors.getTempCByIndex(0);
+  //tempKelvin = tempC + 273.15;
 
 
 
 
-if(abs(Rprev - R) > RdeltaThreshold) { // if big change in R - assign averages
+  if (analogRead(buttonPin) > 700) { buttonState = true; Serial.println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"); }
+  else                               buttonState = false;
 
-  if(count > 0) { // if it's NOT the first read  //prevents divisions by 0  //could increase this 
-    if(isFirstCalculation) {
-      R1 = Rsum/count;
-      isFirstCalculation = false;
+  if (buttonState == false && buttonStatePrev == true) { // button pressed - print current avg  //true + false - too many false positives
+
+    if (isR1) { // if FIRST period 
+      R1 = RAvg;
+      lcd.setCursor(5, 0); lcd.print(uint16_t_out(R1));
+
+      RSum = 0;
+      count = 0;
+      RAvg = R; // recalculate average from now on
+
+      isR1 = false;
     }
-    else {
-      R2 = Rsum/count;
-      isFirstCalculation = true;
+
+    else { // if SECOND period
+      R2 = RAvg;
+      lcd.setCursor(5, 1); lcd.print(uint16_t_out(R2));
+
+      RSum = 0;
+      count = 0;
+      RAvg = R; // recalculate average from now on
+
+      isR1 = true;
     }
   }
 
-  //reset for next stable period 
-  Rsum = R;
-  count = 1;
+  else { // button not pressed - calculate average
+    RSum += R;
+    count++;
+    RAvg = RSum/count;
+  }
 
-  Rprev = R;
-}
+  buttonStatePrev = buttonState; // 2nd sample of button to check if pressed 
 
-else { // if stable period - accumulate for averages
-  Rsum += R;
-  count++;
 
-  //RAvg = Rsum/count; //for debugging ONLY - ALL TIME average
-
-  Rprev = R;
-}
+  delay(50); // display frame
 
 
 
 
-lcd.setCursor(5, 0); lcd.print(format_uint16(R1));
-lcd.setCursor(5, 1); lcd.print(format_uint16(R2));
-delay(50); // display frame
+  Serial.print(float_out(value)); Serial.print(" analog");
+  Serial.print("  ");
+  Serial.print(float_out(V)); Serial.print(" V"); 
+
+  Serial.print("      ");
+
+  Serial.print(uint16_t_out(R)); Serial.print(" R");
+  Serial.print("  ");
+  Serial.print(uint16_t_out(RAvg)); Serial.print(" avg R");
+
+  Serial.print("      ");
+
+  Serial.print(uint16_t_out(R1)); Serial.print(" R1");
+  Serial.print("  ");
+  Serial.print(uint16_t_out(R2)); Serial.print(" R2");
 
 
-
-
-Serial.print(value); Serial.print(" value");
-Serial.print("  ");
-Serial.print(maxValue); Serial.print(" max value"); 
-
-Serial.print("      ");
-
-Serial.print(V); Serial.print(" V"); 
-Serial.print("  "); 
-Serial.print(Vmax); Serial.print(" max V"); 
-
-Serial.print("      ");
-
-Serial.print(R); Serial.print(" ohm");
-Serial.print("  ");
-Serial.print(Rmin); Serial.print(" min ohm"); 
-
-Serial.print("      ");
-
-Serial.print(RAvg); Serial.print(" avg ohm");
-
-
-
-
-Serial.println("");
+  Serial.println("");
 }
