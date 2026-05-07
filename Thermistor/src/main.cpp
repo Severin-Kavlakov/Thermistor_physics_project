@@ -43,6 +43,8 @@ float tempC2      = 0.00;
 float tempKelvin2 = 0.00;
 
 
+
+
 char bufferFloat[5];
 char* float_out(float f) {
   dtostrf(f, sizeof(bufferFloat), 2, bufferFloat); //decimals
@@ -81,12 +83,10 @@ void loop() {
   V = value * (5.0 / 1023.0);
   R = RseriesResistor * ((1023.0 / value) - 1);
 
-  
 
 
 
-
-  if (analogRead(buttonPin) > 700) { buttonState = true; Serial.println("BUTTON PRESS!  BUTTON PRESS!  BUTTON PRESS!  "); }
+  if (analogRead(buttonPin) > 700) { buttonState = true; Serial.println("BUTTON PRESS!"); }
   else                               buttonState = false;
 
   if (buttonState == false && buttonStatePrev == true) { // button pressed - print current avg
@@ -134,15 +134,7 @@ void loop() {
 
   buttonStatePrev = buttonState; // 2nd sample of button to check if pressed 
 
-
-  delay(50); // display frame
-
-
-
-
-
-
-
+  
 
 
   Serial.print(float_out(value)); Serial.print(" analog");
@@ -167,10 +159,11 @@ void loop() {
   Serial.print("  ");
   Serial.print(float_out(tempKelvin2)); Serial.print(" K2");
 
-
-
-
-
   
   Serial.println("");
+
+
+
+
+  delay(50);
 }
