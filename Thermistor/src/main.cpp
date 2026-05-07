@@ -161,6 +161,16 @@ void loop() {
   Serial.print("  ");
   Serial.print(uint16_t_out(R2)); Serial.print(" R2");
 
+  Serial.print("      ");
 
+  Serial.print(float_out(tempKelvin1)); Serial.print(" K1");
+  Serial.print("  ");
+  Serial.print(float_out(tempKelvin2)); Serial.print(" K2");
+
+
+
+
+
+  
   Serial.println("");
 }
