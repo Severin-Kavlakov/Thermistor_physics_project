@@ -37,10 +37,10 @@ uint16_t R1 = 0;
 uint16_t R2 = 0;
 bool isR1 = true;
 
-float tempC      = 0.00;
-float tempKelvin = 0.00;
-
-
+float tempC1      = 0.00;
+float tempKelvin1 = 0.00;
+float tempC2      = 0.00;
+float tempKelvin2 = 0.00;
 
 
 char bufferFloat[5];
@@ -64,8 +64,8 @@ void setup() {
   pinMode(thermistorPin, INPUT);
   lcd.begin(16, 2);
 
-  lcd.setCursor(0, 0); lcd.print("T1 R=");
-  lcd.setCursor(0, 1); lcd.print("T2 R=");
+  lcd.setCursor(0, 0); lcd.print("R1 ");
+  lcd.setCursor(0, 1); lcd.print("R2 ");
 
   sensors.begin(); // Start temperature sensor lib
 
@@ -81,21 +81,25 @@ void loop() {
   V = value * (5.0 / 1023.0);
   R = RseriesResistor * ((1023.0 / value) - 1);
 
-  //sensors.requestTemperatures();
-  //tempC = sensors.getTempCByIndex(0);
-  //tempKelvin = tempC + 273.15;
+  
 
 
 
 
-  if (analogRead(buttonPin) > 700) { buttonState = true; Serial.println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"); }
+  if (analogRead(buttonPin) > 700) { buttonState = true; Serial.println("BUTTON PRESS!  BUTTON PRESS!  BUTTON PRESS!  "); }
   else                               buttonState = false;
 
-  if (buttonState == false && buttonStatePrev == true) { // button pressed - print current avg  //true + false - too many false positives
+  if (buttonState == false && buttonStatePrev == true) { // button pressed - print current avg
 
     if (isR1) { // if FIRST period 
       R1 = RAvg;
-      lcd.setCursor(5, 0); lcd.print(uint16_t_out(R1));
+      lcd.setCursor(3, 0); lcd.print(uint16_t_out(R1));
+
+      sensors.requestTemperatures();
+      tempC1 = sensors.getTempCByIndex(0);
+      tempKelvin1 = tempC1 + 273.15;
+
+      lcd.setCursor(10, 0); lcd.print(tempKelvin1);
 
       RSum = 0;
       count = 0;
@@ -106,7 +110,13 @@ void loop() {
 
     else { // if SECOND period
       R2 = RAvg;
-      lcd.setCursor(5, 1); lcd.print(uint16_t_out(R2));
+      lcd.setCursor(3, 1); lcd.print(uint16_t_out(R2));
+
+      sensors.requestTemperatures();
+      tempC2 = sensors.getTempCByIndex(0);
+      tempKelvin2 = tempC2 + 273.15;
+
+      lcd.setCursor(10, 1); lcd.print(tempKelvin2);
 
       RSum = 0;
       count = 0;
@@ -126,6 +136,11 @@ void loop() {
 
 
   delay(50); // display frame
+
+
+
+
+
 
 
 
