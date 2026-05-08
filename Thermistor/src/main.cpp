@@ -42,6 +42,8 @@ float tempKelvin1 = 0.00;
 float tempC2      = 0.00;
 float tempKelvin2 = 0.00;
 
+float B = 0;
+
 
 
 
@@ -61,18 +63,13 @@ char* uint16_t_out(uint16_t i) {
 
 
 void setup() {
-
   Serial.begin(9600);
   pinMode(thermistorPin, INPUT);
   lcd.begin(16, 2);
 
-  lcd.setCursor(0, 0); lcd.print("R1 ");
-  lcd.setCursor(0, 1); lcd.print("R2 ");
-
   sensors.begin(); // Start temperature sensor lib
 
   delay(1000); //debigging
-
 }
 
 
@@ -83,9 +80,6 @@ void loop() {
   V = value * (5.0 / 1023.0);
   R = RseriesResistor * ((1023.0 / value) - 1);
 
-
-
-
   if (analogRead(buttonPin) > 700) { buttonState = true; Serial.println("BUTTON PRESS!"); }
   else                               buttonState = false;
 
@@ -93,13 +87,12 @@ void loop() {
 
     if (isR1) { // if FIRST period 
       R1 = RAvg;
-      lcd.setCursor(3, 0); lcd.print(uint16_t_out(R1));
+      lcd.setCursor(0, 0); lcd.print(uint16_t_out(R1));
 
       sensors.requestTemperatures();
       tempC1 = sensors.getTempCByIndex(0);
       tempKelvin1 = tempC1 + 273.15;
-
-      lcd.setCursor(10, 0); lcd.print(tempKelvin1);
+      lcd.setCursor(6, 0); lcd.print(tempKelvin1);
 
       RSum = 0;
       count = 0;
@@ -110,13 +103,17 @@ void loop() {
 
     else { // if SECOND period
       R2 = RAvg;
-      lcd.setCursor(3, 1); lcd.print(uint16_t_out(R2));
+      lcd.setCursor(0, 1); lcd.print(uint16_t_out(R2));
 
       sensors.requestTemperatures();
       tempC2 = sensors.getTempCByIndex(0);
       tempKelvin2 = tempC2 + 273.15;
+      lcd.setCursor(6, 1); lcd.print(tempKelvin2);
 
-      lcd.setCursor(10, 1); lcd.print(tempKelvin2);
+      B =               (log((float)R1/R2)) / 
+          ((1.0/tempKelvin1) - (1.0/tempKelvin2));
+
+      
 
       RSum = 0;
       count = 0;
@@ -159,7 +156,11 @@ void loop() {
   Serial.print("  ");
   Serial.print(float_out(tempKelvin2)); Serial.print(" K2");
 
-  
+  Serial.print("      ");
+
+  Serial.print(float_out(B)); Serial.print(" B");
+
+
   Serial.println("");
 
 
